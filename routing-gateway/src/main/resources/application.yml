@@ -1,21 +1,31 @@
 server:
   port: 9530
+
 spring:
   application:
     name: Gateway
   cloud:
     gateway:
       routes:
-        - id: v2sual
-          uri: ws:lb://v2sual
-          predicates:
-            - Path=/service/v2sual/**
-          filters:
-            - StripPrefix=2
+        # client request -> webide service
         - id: webide
-          uri: lb://webide
+            uri: lb://webide
+            predicates:
+              - Path=/**
+        # client request -> v2sual service(websocket)
+        - id: v2sual-websocket
+          uri: dlb:ws://serviceId
           predicates:
-            - Path=**
+            - Path=/service/{productType}/{productId}/socket.io/**
+          filters:
+            - StripPrefix=3
+        # client request -> v2sual service(http)
+        - id: v2sual-http
+          uri: dlb://serviceId
+          predicates:
+            - Path=/service/{productType}/{productId}/**
+          filters:
+            - StripPrefix=3
       loadbalancer:
         use404: true
 eureka:
@@ -23,3 +33,21 @@ eureka:
     service-url:
       defaultZone: http://localhost:9528/eureka
     register-with-eureka: false
+
+logging:
+  level:
+    org:
+      springframework:
+        boot:
+          autoconfigure:
+            web: trace
+        cloud:
+          gateway: trace
+        http:
+          server:
+            reactive: trace
+        web:
+          reactive: trace
+    redisratelimiter: trace
+    reactor:
+      netty: trace
