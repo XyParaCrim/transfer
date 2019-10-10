@@ -1,33 +1,45 @@
 server:
   port: 9530
 
+
 spring:
+  main:
+    allow-bean-definition-overriding: true
   application:
     name: Gateway
   cloud:
     gateway:
+      httpclient:
+        websocket:
+          # 20M
+          max-frame-payload-length: 20485760
       routes:
-        # client request -> webide service
-        - id: webide
-            uri: lb://webide
-            predicates:
-              - Path=/**
         # client request -> v2sual service(websocket)
         - id: v2sual-websocket
-          uri: dlb:ws://serviceId
+          uri: dlb:ws://fromPath
           predicates:
             - Path=/service/{productType}/{productId}/socket.io/**
           filters:
             - StripPrefix=3
         # client request -> v2sual service(http)
+#        - id: v2sual-http
+#          uri: dlb://serviceId
+#          predicates:
+#            - Path=/service/{productType}/{productId}/**
+#          filters:
+#            - StripPrefix=3
         - id: v2sual-http
-          uri: dlb://serviceId
+          uri: dlb://fromCookie
           predicates:
-            - Path=/service/{productType}/{productId}/**
-          filters:
-            - StripPrefix=3
+            - Path=/v1/**
+        # client request -> webide service
+        - id: webide
+          uri: http://localhost:8082
+          predicates:
+            - Path=/**
       loadbalancer:
         use404: true
+
 eureka:
   client:
     service-url:
@@ -36,6 +48,13 @@ eureka:
 
 logging:
   level:
+    io:
+      netty:
+        handler:
+          codec:
+            http:
+              websocketx:
+                trace
     org:
       springframework:
         boot:
@@ -51,3 +70,7 @@ logging:
     redisratelimiter: trace
     reactor:
       netty: trace
+    com:
+      netflix:
+        loadbalancer:
+          ZoneAwareLoadBalancer: trace
